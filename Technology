@@ -2,12 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict D8ATDdutEADNin9s3fH0PDmgMEzzv2B3BBj7ZTWneCHQjrfkfiNzfxOydgVfJy8
+\restrict 7gqLZm3CLomhJ3VTwQBTz2YshLYeRqRy4yyQ2ba9dSrwIpcHvswIioPluMfB1yp
 
 -- Dumped from database version 18.1
--- Dumped by pg_dump version 18.0
-
--- Started on 2026-10-11 22:28:01
+-- Dumped by pg_dump version 18.1
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -26,21 +24,19 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 222 (class 1259 OID 27434)
 -- Name: categories; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.categories (
     id integer NOT NULL,
     name character varying(80) NOT NULL,
-    description character varying(80) NOT NULL
+    slug character varying(80) NOT NULL
 );
 
 
 ALTER TABLE public.categories OWNER TO postgres;
 
 --
--- TOC entry 221 (class 1259 OID 27433)
 -- Name: categories_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -56,8 +52,6 @@ CREATE SEQUENCE public.categories_id_seq
 ALTER SEQUENCE public.categories_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4964 (class 0 OID 0)
--- Dependencies: 221
 -- Name: categories_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -65,14 +59,12 @@ ALTER SEQUENCE public.categories_id_seq OWNED BY public.categories.id;
 
 
 --
--- TOC entry 224 (class 1259 OID 27448)
 -- Name: devices; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.devices (
     id integer NOT NULL,
     category_id integer NOT NULL,
-    type character varying(50) NOT NULL,
     brand character varying(80) NOT NULL,
     model character varying(120) NOT NULL,
     release_year integer
@@ -82,7 +74,6 @@ CREATE TABLE public.devices (
 ALTER TABLE public.devices OWNER TO postgres;
 
 --
--- TOC entry 223 (class 1259 OID 27447)
 -- Name: devices_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -98,8 +89,6 @@ CREATE SEQUENCE public.devices_id_seq
 ALTER SEQUENCE public.devices_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4965 (class 0 OID 0)
--- Dependencies: 223
 -- Name: devices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -107,7 +96,89 @@ ALTER SEQUENCE public.devices_id_seq OWNED BY public.devices.id;
 
 
 --
--- TOC entry 226 (class 1259 OID 27467)
+-- Name: order_items; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.order_items (
+    id integer NOT NULL,
+    order_id integer NOT NULL,
+    product_id integer NOT NULL,
+    seller_id integer NOT NULL,
+    quantity integer DEFAULT 1 NOT NULL,
+    price numeric(10,2) NOT NULL,
+    CONSTRAINT order_items_quantity_check CHECK ((quantity > 0))
+);
+
+
+ALTER TABLE public.order_items OWNER TO postgres;
+
+--
+-- Name: order_items_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.order_items_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.order_items_id_seq OWNER TO postgres;
+
+--
+-- Name: order_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.order_items_id_seq OWNED BY public.order_items.id;
+
+
+--
+-- Name: orders; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.orders (
+    id integer NOT NULL,
+    buyer_id integer NOT NULL,
+    total numeric(10,2) DEFAULT 0 NOT NULL,
+    status character varying(20) DEFAULT 'new'::character varying NOT NULL,
+    address text NOT NULL,
+    phone character varying(20) NOT NULL,
+    payment_method character varying(20) DEFAULT 'card'::character varying NOT NULL,
+    comment text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT orders_payment_check CHECK (((payment_method)::text = ANY ((ARRAY['card'::character varying, 'cash'::character varying, 'online'::character varying])::text[]))),
+    CONSTRAINT orders_status_check CHECK (((status)::text = ANY ((ARRAY['new'::character varying, 'paid'::character varying, 'shipped'::character varying, 'delivered'::character varying, 'canceled'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.orders OWNER TO postgres;
+
+--
+-- Name: orders_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.orders_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.orders_id_seq OWNER TO postgres;
+
+--
+-- Name: orders_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.orders_id_seq OWNED BY public.orders.id;
+
+
+--
 -- Name: products; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -130,7 +201,6 @@ CREATE TABLE public.products (
 ALTER TABLE public.products OWNER TO postgres;
 
 --
--- TOC entry 225 (class 1259 OID 27466)
 -- Name: products_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -146,8 +216,6 @@ CREATE SEQUENCE public.products_id_seq
 ALTER SEQUENCE public.products_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4966 (class 0 OID 0)
--- Dependencies: 225
 -- Name: products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -155,15 +223,14 @@ ALTER SEQUENCE public.products_id_seq OWNED BY public.products.id;
 
 
 --
--- TOC entry 228 (class 1259 OID 27498)
 -- Name: repair_requests; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.repair_requests (
     id integer NOT NULL,
-    client_id integer NOT NULL,
+    buyer_id integer NOT NULL,
     master_id integer,
-    device_id integer,
+    device_id integer NOT NULL,
     description text NOT NULL,
     status character varying(20) DEFAULT 'new'::character varying NOT NULL,
     price numeric(10,2),
@@ -176,7 +243,6 @@ CREATE TABLE public.repair_requests (
 ALTER TABLE public.repair_requests OWNER TO postgres;
 
 --
--- TOC entry 227 (class 1259 OID 27497)
 -- Name: repair_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -192,8 +258,6 @@ CREATE SEQUENCE public.repair_requests_id_seq
 ALTER SEQUENCE public.repair_requests_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4967 (class 0 OID 0)
--- Dependencies: 227
 -- Name: repair_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -201,7 +265,6 @@ ALTER SEQUENCE public.repair_requests_id_seq OWNED BY public.repair_requests.id;
 
 
 --
--- TOC entry 230 (class 1259 OID 27532)
 -- Name: reviews; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -220,7 +283,6 @@ CREATE TABLE public.reviews (
 ALTER TABLE public.reviews OWNER TO postgres;
 
 --
--- TOC entry 229 (class 1259 OID 27531)
 -- Name: reviews_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -236,8 +298,6 @@ CREATE SEQUENCE public.reviews_id_seq
 ALTER SEQUENCE public.reviews_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4968 (class 0 OID 0)
--- Dependencies: 229
 -- Name: reviews_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -245,17 +305,25 @@ ALTER SEQUENCE public.reviews_id_seq OWNED BY public.reviews.id;
 
 
 --
--- TOC entry 220 (class 1259 OID 27414)
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.users (
     id integer NOT NULL,
-    username character varying(50) NOT NULL,
+    last_name character varying(50) NOT NULL,
+    first_name character varying(50) NOT NULL,
+    middle_name character varying(50),
     email character varying(100) NOT NULL,
     password_hash character varying(255) NOT NULL,
     role character varying(20) DEFAULT 'buyer'::character varying NOT NULL,
+    avatar_url character varying(255),
+    phone character varying(20),
+    bio text,
+    city character varying(80),
     created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    is_blocked boolean DEFAULT false NOT NULL,
+    blocked_reason text,
     CONSTRAINT users_role_check CHECK (((role)::text = ANY ((ARRAY['buyer'::character varying, 'seller'::character varying, 'master'::character varying, 'admin'::character varying])::text[])))
 );
 
@@ -263,7 +331,6 @@ CREATE TABLE public.users (
 ALTER TABLE public.users OWNER TO postgres;
 
 --
--- TOC entry 219 (class 1259 OID 27413)
 -- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -279,8 +346,6 @@ CREATE SEQUENCE public.users_id_seq
 ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4969 (class 0 OID 0)
--- Dependencies: 219
 -- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -288,7 +353,6 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- TOC entry 4753 (class 2604 OID 27437)
 -- Name: categories id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -296,7 +360,6 @@ ALTER TABLE ONLY public.categories ALTER COLUMN id SET DEFAULT nextval('public.c
 
 
 --
--- TOC entry 4754 (class 2604 OID 27451)
 -- Name: devices id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -304,7 +367,20 @@ ALTER TABLE ONLY public.devices ALTER COLUMN id SET DEFAULT nextval('public.devi
 
 
 --
--- TOC entry 4755 (class 2604 OID 27470)
+-- Name: order_items id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_items ALTER COLUMN id SET DEFAULT nextval('public.order_items_id_seq'::regclass);
+
+
+--
+-- Name: orders id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.orders ALTER COLUMN id SET DEFAULT nextval('public.orders_id_seq'::regclass);
+
+
+--
 -- Name: products id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -312,7 +388,6 @@ ALTER TABLE ONLY public.products ALTER COLUMN id SET DEFAULT nextval('public.pro
 
 
 --
--- TOC entry 4759 (class 2604 OID 27501)
 -- Name: repair_requests id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -320,7 +395,6 @@ ALTER TABLE ONLY public.repair_requests ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
--- TOC entry 4763 (class 2604 OID 27535)
 -- Name: reviews id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -328,7 +402,6 @@ ALTER TABLE ONLY public.reviews ALTER COLUMN id SET DEFAULT nextval('public.revi
 
 
 --
--- TOC entry 4750 (class 2604 OID 27417)
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -336,48 +409,77 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 
 
 --
--- TOC entry 4950 (class 0 OID 27434)
--- Dependencies: 222
 -- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.categories (id, name, description) FROM stdin;
+COPY public.categories (id, name, slug) FROM stdin;
+1	Смартфоны	smartphones
+2	Ноутбуки	laptops
+3	Планшеты	tablets
+4	Комплектующие	components
+5	Аксессуары	accessories
+6	Клавиатуры и мыши	keyboards and mouses
 \.
 
 
 --
--- TOC entry 4952 (class 0 OID 27448)
--- Dependencies: 224
 -- Data for Name: devices; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.devices (id, category_id, type, brand, model, release_year) FROM stdin;
+COPY public.devices (id, category_id, brand, model, release_year) FROM stdin;
+1	1	Apple	iPhone 13	2021
+2	1	Samsung	Galaxy S22	2022
+3	1	Xiaomi	Redmi Note 11	2022
+4	2	ASUS	ROG Strix G15	2021
+5	2	Apple	MacBook Air M2	2022
+6	6	папапаы	выааыа	2025
 \.
 
 
 --
--- TOC entry 4954 (class 0 OID 27467)
--- Dependencies: 226
+-- Data for Name: order_items; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.order_items (id, order_id, product_id, seller_id, quantity, price) FROM stdin;
+2	2	6	5	1	27000.00
+3	2	3	4	1	85000.00
+\.
+
+
+--
+-- Data for Name: orders; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.orders (id, buyer_id, total, status, address, phone, payment_method, comment, created_at, updated_at) FROM stdin;
+2	11	112000.00	paid	Улица пушкина дом колотушкина	896434349595	cash		2026-10-20 16:02:20.096	2026-10-20 16:05:20.066
+\.
+
+
+--
 -- Data for Name: products; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.products (id, seller_id, category_id, title, description, brand, price, condition, image_url, stock, created_at) FROM stdin;
+1	4	1	Смартфон Apple iPhone 13 128Gb	Отличное состояние, ёмкость АКБ 89%. Полный комплект.	Apple	48990.00	used	https://placehold.co/600x400/0284c7/ffffff?text=iPhone+13	1	2026-10-20 22:38:39.86948
+4	5	4	Видеокарта NVIDIA GeForce RTX 3060	Новая, в упаковке. 12Gb GDDR6. Идеально для игр и работы.	NVIDIA	34900.00	new	https://placehold.co/600x400/0284c7/ffffff?text=RTX+3060	2	2026-10-20 22:38:39.86948
+5	4	5	Беспроводные наушники AirPods Pro 2	Оригинал. Активное шумоподавление. Новые, запечатанные.	Apple	21500.00	new	https://placehold.co/600x400/0284c7/ffffff?text=AirPods+Pro	5	2026-10-20 22:38:39.86948
+6	5	3	Планшет Xiaomi Pad 5 128Gb	Отличный планшет для учебы и развлечений. В комплекте чехол-клавиатура.	Xiaomi	27000.00	used	https://placehold.co/600x400/0284c7/ffffff?text=Xiaomi+Pad	0	2026-10-20 22:38:39.86948
+3	4	2	Ноутбук ASUS ROG Strix G15	Игровой ноутбук. Ryzen 7, RTX 3060, 16ГБ ОЗУ. Б/у, идеальное состояние.	ASUS	85000.00	used	https://placehold.co/600x400/0284c7/ffffff?text=ASUS+ROG	0	2026-10-20 22:38:39.86948
+2	5	1	Смартфон Samsung Galaxy S22 256Gb	Новый, запечатанный. Гарантия от магазина 1 год.	Samsung	62990.00	new	https://placehold.co/600x400/0284c7/ffffff?text=Galaxy+S22	3	2026-10-20 22:38:39.86948
+7	4	1	gfgfgf	авававаы	Samsung	50000.00	new	https://placehold.co/600x400/0284c7/ffffff?text=Galaxy+S22	1	2026-10-20 16:08:48.826
 \.
 
 
 --
--- TOC entry 4956 (class 0 OID 27498)
--- Dependencies: 228
 -- Data for Name: repair_requests; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.repair_requests (id, client_id, master_id, device_id, description, status, price, created_at, updated_at) FROM stdin;
+COPY public.repair_requests (id, buyer_id, master_id, device_id, description, status, price, created_at, updated_at) FROM stdin;
+2	11	7	2	Сломан обьектив.	in_progress	10000.00	2026-10-20 16:02:57.87	2026-10-20 16:08:05.121
 \.
 
 
 --
--- TOC entry 4958 (class 0 OID 27532)
--- Dependencies: 230
 -- Data for Name: reviews; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -386,54 +488,64 @@ COPY public.reviews (id, author_id, target_user_id, product_id, rating, comment,
 
 
 --
--- TOC entry 4948 (class 0 OID 27414)
--- Dependencies: 220
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.users (id, username, email, password_hash, role, created_at) FROM stdin;
+COPY public.users (id, last_name, first_name, middle_name, email, password_hash, role, avatar_url, phone, bio, city, created_at, updated_at, is_blocked, blocked_reason) FROM stdin;
+1	Админов	Александр	Сергеевич	admin@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	admin	\N	\N	\N	\N	2026-10-20 14:59:04.659	2026-10-20 14:59:04.659	f	\N
+2	Иванов	Иван	Петрович	ivan@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	buyer	\N	\N	\N	\N	2026-10-20 14:59:04.66	2026-10-20 14:59:04.66	f	\N
+3	Петров	Пётр	Алексеевич	petr@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	buyer	\N	\N	\N	\N	2026-10-20 14:59:04.66	2026-10-20 14:59:04.661	f	\N
+4	Смирнов	Олег	Игоревич	shop@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	seller	\N	\N	\N	\N	2026-10-20 14:59:04.661	2026-10-20 14:59:04.661	f	\N
+5	Кузнецов	Дмитрий	Валерьевич	gp@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	seller	\N	\N	\N	\N	2026-10-20 14:59:04.661	2026-10-20 14:59:04.661	f	\N
+6	Морозов	Алексей	Николаевич	alex@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	master	\N	\N	\N	\N	2026-10-20 14:59:04.661	2026-10-20 14:59:04.661	f	\N
+7	Волков	Сергей	Петрович	sergey@tech.ru	$2b$10$jITC9yIayQWgg79.rg.xTOlVAMIvywfBAhT0AFy2RP.WpdAsjQD5O	master	\N	\N	\N	\N	2026-10-20 14:59:04.661	2026-10-20 14:59:04.661	f	\N
+11	Ерохин	Степан	Романович	stepan@gmail.com	$2b$10$IJI3dwDbIwFP/atBlVjRDuVuANtiYYXU9viHy.pYOt8wXQI1O0QjS	seller		896434349595	Текст куча текста.	Новосибирск	2026-10-20 16:00:38.663	2026-10-20 16:04:14.63	f	\N
 \.
 
 
 --
--- TOC entry 4970 (class 0 OID 0)
--- Dependencies: 221
 -- Name: categories_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.categories_id_seq', 1, false);
+SELECT pg_catalog.setval('public.categories_id_seq', 6, true);
 
 
 --
--- TOC entry 4971 (class 0 OID 0)
--- Dependencies: 223
 -- Name: devices_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.devices_id_seq', 1, false);
+SELECT pg_catalog.setval('public.devices_id_seq', 6, true);
 
 
 --
--- TOC entry 4972 (class 0 OID 0)
--- Dependencies: 225
+-- Name: order_items_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.order_items_id_seq', 3, true);
+
+
+--
+-- Name: orders_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.orders_id_seq', 2, true);
+
+
+--
 -- Name: products_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.products_id_seq', 1, false);
+SELECT pg_catalog.setval('public.products_id_seq', 7, true);
 
 
 --
--- TOC entry 4973 (class 0 OID 0)
--- Dependencies: 227
 -- Name: repair_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.repair_requests_id_seq', 1, false);
+SELECT pg_catalog.setval('public.repair_requests_id_seq', 2, true);
 
 
 --
--- TOC entry 4974 (class 0 OID 0)
--- Dependencies: 229
 -- Name: reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -441,25 +553,13 @@ SELECT pg_catalog.setval('public.reviews_id_seq', 1, false);
 
 
 --
--- TOC entry 4975 (class 0 OID 0)
--- Dependencies: 219
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 1, false);
+SELECT pg_catalog.setval('public.users_id_seq', 11, true);
 
 
 --
--- TOC entry 4776 (class 2606 OID 27446)
--- Name: categories categories_description_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.categories
-    ADD CONSTRAINT categories_description_key UNIQUE (description);
-
-
---
--- TOC entry 4778 (class 2606 OID 27444)
 -- Name: categories categories_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -468,7 +568,6 @@ ALTER TABLE ONLY public.categories
 
 
 --
--- TOC entry 4780 (class 2606 OID 27442)
 -- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -477,7 +576,14 @@ ALTER TABLE ONLY public.categories
 
 
 --
--- TOC entry 4782 (class 2606 OID 27458)
+-- Name: categories categories_slug_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_slug_key UNIQUE (slug);
+
+
+--
 -- Name: devices devices_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -486,7 +592,6 @@ ALTER TABLE ONLY public.devices
 
 
 --
--- TOC entry 4784 (class 2606 OID 27460)
 -- Name: devices devices_unique_model; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -495,7 +600,22 @@ ALTER TABLE ONLY public.devices
 
 
 --
--- TOC entry 4786 (class 2606 OID 27486)
+-- Name: order_items order_items_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_items
+    ADD CONSTRAINT order_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -504,7 +624,6 @@ ALTER TABLE ONLY public.products
 
 
 --
--- TOC entry 4788 (class 2606 OID 27515)
 -- Name: repair_requests repair_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -513,7 +632,6 @@ ALTER TABLE ONLY public.repair_requests
 
 
 --
--- TOC entry 4790 (class 2606 OID 27546)
 -- Name: reviews reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -522,7 +640,6 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4770 (class 2606 OID 27432)
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -531,7 +648,6 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4772 (class 2606 OID 27428)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -540,16 +656,83 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4774 (class 2606 OID 27430)
--- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: idx_items_order; Type: INDEX; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_username_key UNIQUE (username);
+CREATE INDEX idx_items_order ON public.order_items USING btree (order_id);
 
 
 --
--- TOC entry 4791 (class 2606 OID 27461)
+-- Name: idx_items_product; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_items_product ON public.order_items USING btree (product_id);
+
+
+--
+-- Name: idx_items_seller; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_items_seller ON public.order_items USING btree (seller_id);
+
+
+--
+-- Name: idx_orders_buyer; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_orders_buyer ON public.orders USING btree (buyer_id);
+
+
+--
+-- Name: idx_orders_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_orders_status ON public.orders USING btree (status);
+
+
+--
+-- Name: idx_products_category; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_products_category ON public.products USING btree (category_id);
+
+
+--
+-- Name: idx_products_seller; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_products_seller ON public.products USING btree (seller_id);
+
+
+--
+-- Name: idx_repair_buyer; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_repair_buyer ON public.repair_requests USING btree (buyer_id);
+
+
+--
+-- Name: idx_repair_device; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_repair_device ON public.repair_requests USING btree (device_id);
+
+
+--
+-- Name: idx_repair_master; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_repair_master ON public.repair_requests USING btree (master_id);
+
+
+--
+-- Name: idx_users_role; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_users_role ON public.users USING btree (role);
+
+
+--
 -- Name: devices devices_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -558,16 +741,46 @@ ALTER TABLE ONLY public.devices
 
 
 --
--- TOC entry 4792 (class 2606 OID 27492)
+-- Name: order_items order_items_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_items
+    ADD CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE;
+
+
+--
+-- Name: order_items order_items_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_items
+    ADD CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: order_items order_items_seller_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.order_items
+    ADD CONSTRAINT order_items_seller_id_fkey FOREIGN KEY (seller_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: orders orders_buyer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_buyer_id_fkey FOREIGN KEY (buyer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: products products_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.products
-    ADD CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id);
+    ADD CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE RESTRICT;
 
 
 --
--- TOC entry 4793 (class 2606 OID 27487)
 -- Name: products products_seller_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -576,25 +789,22 @@ ALTER TABLE ONLY public.products
 
 
 --
--- TOC entry 4794 (class 2606 OID 27516)
--- Name: repair_requests repair_requests_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: repair_requests repair_requests_buyer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.repair_requests
-    ADD CONSTRAINT repair_requests_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT repair_requests_buyer_id_fkey FOREIGN KEY (buyer_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
--- TOC entry 4795 (class 2606 OID 27526)
 -- Name: repair_requests repair_requests_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.repair_requests
-    ADD CONSTRAINT repair_requests_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE SET NULL;
+    ADD CONSTRAINT repair_requests_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE RESTRICT;
 
 
 --
--- TOC entry 4796 (class 2606 OID 27521)
 -- Name: repair_requests repair_requests_master_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -603,7 +813,6 @@ ALTER TABLE ONLY public.repair_requests
 
 
 --
--- TOC entry 4797 (class 2606 OID 27547)
 -- Name: reviews reviews_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -612,7 +821,6 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4798 (class 2606 OID 27557)
 -- Name: reviews reviews_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -621,7 +829,6 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4799 (class 2606 OID 27552)
 -- Name: reviews reviews_target_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -629,11 +836,9 @@ ALTER TABLE ONLY public.reviews
     ADD CONSTRAINT reviews_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
--- Completed on 2026-10-11 22:28:02
-
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict D8ATDdutEADNin9s3fH0PDmgMEzzv2B3BBj7ZTWneCHQjrfkfiNzfxOydgVfJy8
+\unrestrict 7gqLZm3CLomhJ3VTwQBTz2YshLYeRqRy4yyQ2ba9dSrwIpcHvswIioPluMfB1yp
 
