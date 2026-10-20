@@ -1,10 +1,14 @@
+import React from 'react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 
 export default function Login() {
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ username: '', email: '', password: '', role: 'buyer' });
+  const [form, setForm] = useState({
+    last_name: '', first_name: '', middle_name: '',
+    email: '', password: '', role: 'buyer',
+  });
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -20,7 +24,7 @@ export default function Login() {
       if (mode === 'login') {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/');
+        navigate('/profile');
       } else {
         setMode('login');
       }
@@ -39,43 +43,30 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {mode === 'register' && (
-            <input
-              name="username"
-              placeholder="Имя пользователя"
-              value={form.username}
-              onChange={handleChange}
-              required
-              className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none"
-            />
+            <>
+              <input name="last_name" placeholder="Фамилия"
+                value={form.last_name} onChange={handleChange} required
+                className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none" />
+              <input name="first_name" placeholder="Имя"
+                value={form.first_name} onChange={handleChange} required
+                className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none" />
+              <input name="middle_name" placeholder="Отчество (при наличии)"
+                value={form.middle_name} onChange={handleChange}
+                className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none" />
+            </>
           )}
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none"
-          />
+          <input type="email" name="email" placeholder="Email"
+            value={form.email} onChange={handleChange} required
+            className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none" />
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Пароль"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none"
-          />
+          <input type="password" name="password" placeholder="Пароль"
+            value={form.password} onChange={handleChange} required
+            className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none" />
 
           {mode === 'register' && (
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none"
-            >
+            <select name="role" value={form.role} onChange={handleChange}
+              className="w-full rounded-md border border-slate-300 px-4 py-2 focus:border-sky-500 focus:outline-none">
               <option value="buyer">Покупатель</option>
               <option value="seller">Продавец</option>
               <option value="master">Мастер по ремонту</option>
@@ -84,21 +75,17 @@ export default function Login() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <button
-            type="submit"
-            className="w-full rounded-md bg-sky-500 py-2 font-medium text-white hover:bg-sky-600"
-          >
+          <button type="submit"
+            className="w-full rounded-md bg-sky-500 py-2 font-medium text-white hover:bg-sky-600">
             {mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-slate-600">
           {mode === 'login' ? 'Нет аккаунта? ' : 'Уже есть аккаунт? '}
-          <button
-            type="button"
+          <button type="button"
             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-            className="text-sky-600 hover:underline"
-          >
+            className="text-sky-600 hover:underline">
             {mode === 'login' ? 'Зарегистрироваться' : 'Войти'}
           </button>
         </p>
