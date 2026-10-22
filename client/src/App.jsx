@@ -1,5 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+
+// Импорты страниц
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Profile from './pages/Profile.jsx';
@@ -13,6 +15,7 @@ import MyRepairs from './pages/MyRepairs.jsx';
 import MasterPanel from './pages/MasterPanel.jsx';
 import SellerPanel from './pages/SellerPanel.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
+import Favorites from './pages/Favorites.jsx'; 
 
 export default function App() {
   return (
@@ -30,6 +33,7 @@ export default function App() {
       <Route path="/master" element={<MasterPanel />} />
       <Route path="/seller" element={<SellerPanel />} />
       <Route path="/admin" element={<AdminPanel />} />
+      <Route path="/favorites" element={<Favorites />} /> {/* Маршрут для избранного */}
     </Routes>
   );
 }

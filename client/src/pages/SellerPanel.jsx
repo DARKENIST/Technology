@@ -1,8 +1,8 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Header from '../components/Header.jsx';
+import { getImageUrl } from '../utils/imageHelper.js';
 
 export default function SellerPanel() {
   const navigate = useNavigate();
@@ -11,12 +11,15 @@ export default function SellerPanel() {
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
   const [tab, setTab] = useState('products');
+  
   const [form, setForm] = useState({
     title: '', description: '', brand: '', price: '',
     condition: 'new', category_id: '', image_url: '', stock: 1,
   });
+  
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const load = () => {
     api.get('/seller/products').then(({ data }) => setProducts(data));
@@ -33,6 +36,26 @@ export default function SellerPanel() {
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploading(true);
+    try {
+      const { data } = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setForm({ ...form, image_url: data.url });
+    } catch (err) {
+      setError('Ошибка загрузки изображения');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const submit = async e => {
     e.preventDefault();
     setError('');
@@ -48,6 +71,7 @@ export default function SellerPanel() {
         condition: 'new', category_id: '', image_url: '', stock: 1,
       });
       load();
+      setTab('products');
     } catch (err) {
       setError(err.response?.data?.message || 'Ошибка сохранения');
     }
@@ -102,7 +126,7 @@ export default function SellerPanel() {
             className={`px-4 py-2 text-sm ${tab === 'orders' ? 'border-b-2 border-sky-500 text-sky-600' : 'text-slate-600'}`}>
             Заказы
           </button>
-          <button onClick={() => setTab('add')}
+          <button onClick={() => { setTab('add'); setEditing(null); setForm({ title: '', description: '', brand: '', price: '', condition: 'new', category_id: '', image_url: '', stock: 1 }); }}
             className={`px-4 py-2 text-sm ${tab === 'add' ? 'border-b-2 border-sky-500 text-sky-600' : 'text-slate-600'}`}>
             {editing ? 'Редактирование' : 'Добавить товар'}
           </button>
@@ -114,7 +138,7 @@ export default function SellerPanel() {
               <p className="text-slate-500">Товаров нет.</p>
             ) : products.map(p => (
               <div key={p.id} className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-4">
-                <img src={p.image_url || 'https://picsum.photos/seed/' + p.id + '/80/80'}
+                <img src={getImageUrl(p.image_url, 'https://placehold.co/80x80?text=Нет')}
                   className="w-16 h-16 object-cover rounded" alt={p.title} />
                 <div className="flex-1">
                   <p className="font-medium">{p.title}</p>
@@ -157,8 +181,10 @@ export default function SellerPanel() {
 
         {tab === 'add' && (
           <form onSubmit={submit} className="bg-white p-6 rounded-lg shadow-sm grid gap-4 md:grid-cols-2">
+            {/* ВОЗВРАЩАЕМ ВСЕ ПОЛЯ ФОРМЫ */}
             <input name="title" value={form.title} onChange={handleChange} required
               placeholder="Название" className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
+            
             <input name="brand" value={form.brand} onChange={handleChange}
               placeholder="Бренд" className="rounded-md border border-slate-300 px-4 py-2" />
             <select name="category_id" value={form.category_id} onChange={handleChange} required
@@ -175,9 +201,23 @@ export default function SellerPanel() {
               <option value="new">Новый</option>
               <option value="used">Б/у</option>
             </select>
-            <input name="image_url" value={form.image_url} onChange={handleChange}
-              placeholder="Ссылка на изображение"
-              className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
+            
+            {/* Блок загрузки картинки */}
+            <div className="md:col-span-2 flex items-center gap-4 p-4 border border-slate-200 rounded-md bg-slate-50">
+              {form.image_url ? (
+                <img src={getImageUrl(form.image_url)} alt="Обложка" className="w-20 h-20 object-cover rounded-md border" />
+              ) : (
+                <div className="w-20 h-20 bg-slate-200 rounded-md flex items-center justify-center text-slate-400 text-xs text-center p-2">Нет фото</div>
+              )}
+              <div>
+                <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm font-medium transition inline-block shadow-sm">
+                  {uploading ? 'Загрузка...' : 'Загрузить обложку'}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                </label>
+                <p className="text-xs text-slate-500 mt-2">JPG, PNG до 5 МБ</p>
+              </div>
+            </div>
+
             <textarea name="description" value={form.description} onChange={handleChange}
               rows={4} placeholder="Описание"
               className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
@@ -193,7 +233,7 @@ export default function SellerPanel() {
                 onClick={() => { setEditing(null); setForm({
                   title: '', description: '', brand: '', price: '',
                   condition: 'new', category_id: '', image_url: '', stock: 1,
-                }); }}
+                }); setTab('products'); }}
                 className="md:col-span-2 text-sm text-slate-500 hover:underline">
                 Отменить редактирование
               </button>

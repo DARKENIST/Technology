@@ -1,13 +1,15 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import Header from '../components/Header.jsx';
+import { getImageUrl } from '../utils/imageHelper.js';
 
 export default function Catalog() {
   const [params, setParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  
   const [filters, setFilters] = useState({
     category: params.get('category') || '',
     brand: params.get('brand') || '',
@@ -18,19 +20,45 @@ export default function Catalog() {
     sort: params.get('sort') || '',
   });
 
+  // Загрузка категорий и списка избранного
   useEffect(() => {
     api.get('/categories').then(({ data }) => setCategories(data));
+    
+    if (localStorage.getItem('token')) {
+      api.get('/favorites/ids')
+        .then(({ data }) => setFavoriteIds(data))
+        .catch(() => {});
+    }
   }, []);
 
+  // Загрузка товаров с учетом фильтров
   useEffect(() => {
     const query = Object.fromEntries(
       Object.entries(filters).filter(([, v]) => v)
     );
     api.get('/products', { params: query }).then(({ data }) => setProducts(data));
     setParams(query);
-  }, [filters]);
+  }, [filters, setParams]);
 
   const update = (key, value) => setFilters(f => ({ ...f, [key]: value }));
+
+  // Обработка добавления/удаления из избранного
+  const toggleFavorite = async (e, id) => {
+    e.preventDefault();
+    if (!localStorage.getItem('token')) return alert('Необходима авторизация');
+    
+    try {
+      if (favoriteIds.includes(id)) {
+        await api.delete(`/favorites/${id}`);
+        setFavoriteIds(favoriteIds.filter(fId => fId !== id));
+      } else {
+        await api.post(`/favorites/${id}`);
+        setFavoriteIds([...favoriteIds, id]);
+      }
+    } catch (err) {
+      console.error('Ошибка при изменении избранного:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -92,11 +120,24 @@ export default function Catalog() {
             <p className="text-slate-500">Ничего не найдено.</p>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Функция обратного вызова метода map определяет переменную p */}
               {products.map(p => (
                 <Link key={p.id} to={`/product/${p.id}`}
-                  className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
-                  <img src={p.image_url || 'https://picsum.photos/seed/' + p.id + '/400/300'}
-                    alt={p.title} className="w-full h-40 object-cover" />
+                  className="relative bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
+                  
+                  {/* Кнопка добавления в избранное */}
+                  <button 
+                    onClick={(e) => toggleFavorite(e, p.id)} 
+                    className="absolute top-2 right-2 bg-white p-2 rounded-full shadow hover:scale-110 transition z-10"
+                  >
+                    {favoriteIds.includes(p.id) ? '❤️' : '🤍'}
+                  </button>
+
+                  <img 
+                    src={getImageUrl(p.image_url, 'https://placehold.co/400x300?text=Нет+фото')}
+                    alt={p.title} 
+                    className="w-full h-40 object-cover" 
+                  />
                   <div className="p-4">
                     <p className="text-xs text-slate-500">{p.category?.name}</p>
                     <h3 className="font-semibold text-slate-900 line-clamp-2 mt-1">{p.title}</h3>

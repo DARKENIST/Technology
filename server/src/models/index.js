@@ -6,34 +6,39 @@ import { RepairRequest } from './repairRequest.js';
 import { Review } from './review.js';
 import { Order } from './order.js';
 import { OrderItem } from './orderItem.js';
+import { Favorite } from './favorite.js';
 
-// Товары
+// Связи: Пользователи и Товары
 User.hasMany(Product, { foreignKey: 'seller_id', as: 'products' });
 Product.belongsTo(User, { foreignKey: 'seller_id', as: 'seller' });
+
+// Связи: Категории и Товары
 Category.hasMany(Product, { foreignKey: 'category_id', as: 'products' });
 Product.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 
-// Устройства
+// Связи: Категории и Устройства
 Category.hasMany(Device, { foreignKey: 'category_id', as: 'devices' });
 Device.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 
-// Заявки на ремонт
-User.hasMany(RepairRequest, { foreignKey: 'buyer_id',  as: 'buyerRequests' });
+// Связи: Заявки на ремонт
+User.hasMany(RepairRequest, { foreignKey: 'buyer_id', as: 'buyerRequests' });
 User.hasMany(RepairRequest, { foreignKey: 'master_id', as: 'masterRequests' });
-RepairRequest.belongsTo(User, { foreignKey: 'buyer_id',  as: 'buyer' });
+RepairRequest.belongsTo(User, { foreignKey: 'buyer_id', as: 'buyer' });
 RepairRequest.belongsTo(User, { foreignKey: 'master_id', as: 'master' });
+
 Device.hasMany(RepairRequest, { foreignKey: 'device_id', as: 'repairRequests' });
 RepairRequest.belongsTo(Device, { foreignKey: 'device_id', as: 'device' });
 
-// Отзывы
-User.hasMany(Review, { foreignKey: 'author_id',      as: 'writtenReviews' });
+// Связи: Отзывы
+User.hasMany(Review, { foreignKey: 'author_id', as: 'writtenReviews' });
 User.hasMany(Review, { foreignKey: 'target_user_id', as: 'receivedReviews' });
-Review.belongsTo(User, { foreignKey: 'author_id',      as: 'author' });
+Review.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
 Review.belongsTo(User, { foreignKey: 'target_user_id', as: 'target' });
+
 Product.hasMany(Review, { foreignKey: 'product_id', as: 'reviews' });
 Review.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 
-// Заказы
+// Связи: Заказы
 User.hasMany(Order, { foreignKey: 'buyer_id', as: 'orders' });
 Order.belongsTo(User, { foreignKey: 'buyer_id', as: 'buyer' });
 
@@ -46,4 +51,18 @@ OrderItem.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 User.hasMany(OrderItem, { foreignKey: 'seller_id', as: 'soldItems' });
 OrderItem.belongsTo(User, { foreignKey: 'seller_id', as: 'seller' });
 
-export { User, Category, Device, Product, RepairRequest, Review, Order, OrderItem };
+// Связи: Избранное (многие-ко-многим)
+User.belongsToMany(Product, { through: Favorite, as: 'favorites', foreignKey: 'user_id' });
+Product.belongsToMany(User, { through: Favorite, as: 'favoritedBy', foreignKey: 'product_id' });
+
+export { 
+  User, 
+  Category, 
+  Device, 
+  Product, 
+  RepairRequest, 
+  Review, 
+  Order, 
+  OrderItem, 
+  Favorite 
+};

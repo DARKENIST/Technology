@@ -1,7 +1,7 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import { getImageUrl } from '../utils/imageHelper.js';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState('profile');
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -38,6 +39,27 @@ export default function Profile() {
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
   const handlePassword = e => setPasswords({ ...passwords, [e.target.name]: e.target.value });
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploading(true);
+    setError('');
+    try {
+      const { data } = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setForm({ ...form, avatar_url: data.url });
+    } catch (err) {
+      setError('Ошибка загрузки картинки');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const saveProfile = async e => {
     e.preventDefault();
@@ -71,8 +93,6 @@ export default function Profile() {
 
   if (!user) return <div className="p-8 text-center text-slate-500">Загрузка…</div>;
 
-  const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
-
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-slate-900 text-white">
@@ -87,22 +107,17 @@ export default function Profile() {
 
       <div className="max-w-4xl mx-auto px-6 py-10">
         <div className="flex items-center gap-6 mb-8">
-          {user.avatar_url ? (
-            <img src={user.avatar_url} alt="avatar"
-              className="w-24 h-24 rounded-full object-cover bg-slate-200" />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-sky-500 text-white flex items-center justify-center text-2xl font-bold">
-              {initials || '?'}
-            </div>
-          )}
+          <img 
+            src={getImageUrl(form.avatar_url, `https://ui-avatars.com/api/?name=${user.last_name}`)} 
+            alt="avatar"
+            className="w-24 h-24 rounded-full object-cover bg-slate-200" 
+          />
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {user.last_name} {user.first_name} {user.middle_name || ''}
-            </h1>
-            <p className="text-slate-500">{user.email}</p>
-            <span className="inline-block mt-1 rounded-full bg-sky-100 text-sky-700 text-xs px-3 py-1">
-              {user.role}
-            </span>
+            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-md text-sm font-medium transition border border-slate-300 shadow-sm inline-block">
+              {uploading ? 'Загрузка...' : 'Сменить фото'}
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+            </label>
+            <p className="text-xs text-slate-500 mt-2">JPG, PNG до 5 МБ</p>
           </div>
         </div>
 
@@ -144,9 +159,6 @@ export default function Profile() {
             <input name="city" value={form.city} onChange={handleChange}
               placeholder="Город"
               className="rounded-md border border-slate-300 px-4 py-2" />
-            <input name="avatar_url" value={form.avatar_url} onChange={handleChange}
-              placeholder="Ссылка на аватар"
-              className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
             <textarea name="bio" value={form.bio} onChange={handleChange}
               placeholder="О себе" rows={4}
               className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />

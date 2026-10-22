@@ -1,7 +1,7 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api.js';
+import { getImageUrl } from '../../utils/imageHelper.js';
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -15,6 +15,7 @@ export default function AdminProducts() {
   });
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const load = () => {
     api.get('/admin/products').then(({ data }) => setProducts(data));
@@ -22,12 +23,31 @@ export default function AdminProducts() {
 
   useEffect(() => {
     api.get('/categories').then(({ data }) => setCategories(data));
-    // Загружаем только пользователей с ролью seller
     api.get('/admin/users', { params: { role: 'seller' } }).then(({ data }) => setSellers(data));
     load();
   }, []);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploading(true);
+    try {
+      const { data } = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setForm({ ...form, image_url: data.url });
+    } catch (err) {
+      setError('Ошибка загрузки изображения');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const submit = async e => {
     e.preventDefault();
@@ -90,7 +110,7 @@ export default function AdminProducts() {
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-left">
               <tr>
-                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">Фото</th>
                 <th className="px-4 py-3">Товар</th>
                 <th className="px-4 py-3">Цена</th>
                 <th className="px-4 py-3">Продавец</th>
@@ -100,9 +120,12 @@ export default function AdminProducts() {
             <tbody>
               {products.map(p => (
                 <tr key={p.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">{p.id}</td>
                   <td className="px-4 py-3">
-                    <Link to={`/product/${p.id}`} className="hover:underline">{p.title}</Link>
+                    <img src={getImageUrl(p.image_url, 'https://placehold.co/50x50?text=Нет')} 
+                         alt={p.title} className="w-10 h-10 object-cover rounded" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link to={`/product/${p.id}`} className="hover:underline font-medium">{p.title}</Link>
                   </td>
                   <td className="px-4 py-3">{Number(p.price).toLocaleString('ru-RU')} ₽</td>
                   <td className="px-4 py-3">
@@ -124,7 +147,6 @@ export default function AdminProducts() {
           <input name="title" value={form.title} onChange={handleChange} required
             placeholder="Название" className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
           
-          {/* Выбор продавца */}
           <select name="seller_id" value={form.seller_id} onChange={handleChange} required
             className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2">
             <option value="">Выберите продавца (владельца товара)</option>
@@ -149,9 +171,23 @@ export default function AdminProducts() {
             <option value="new">Новый</option>
             <option value="used">Б/у</option>
           </select>
-          <input name="image_url" value={form.image_url} onChange={handleChange}
-            placeholder="Ссылка на изображение"
-            className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
+
+          {/* Блок загрузки картинки */}
+          <div className="md:col-span-2 flex items-center gap-4 p-4 border border-slate-200 rounded-md bg-slate-50">
+            {form.image_url ? (
+              <img src={getImageUrl(form.image_url)} alt="Обложка" className="w-20 h-20 object-cover rounded-md border" />
+            ) : (
+              <div className="w-20 h-20 bg-slate-200 rounded-md flex items-center justify-center text-slate-400 text-xs text-center p-2">Нет фото</div>
+            )}
+            <div>
+              <label className="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm font-medium transition inline-block shadow-sm">
+                {uploading ? 'Загрузка...' : 'Загрузить обложку'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+              </label>
+              <p className="text-xs text-slate-500 mt-2">JPG, PNG до 5 МБ</p>
+            </div>
+          </div>
+
           <textarea name="description" value={form.description} onChange={handleChange}
             rows={4} placeholder="Описание"
             className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />

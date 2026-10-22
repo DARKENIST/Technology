@@ -50,6 +50,7 @@ export default function Header() {
           {user && (
             <Link to="/my-orders" className="hover:text-sky-400">Заказы</Link>
           )}
+          <Link to="/favorites" className="hover:text-sky-400">Избранное</Link>
           <Link to="/cart" className="relative hover:text-sky-400">
             Корзина
             {cartCount > 0 && (

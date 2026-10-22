@@ -1,5 +1,4 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Header from '../components/Header.jsx';
@@ -20,6 +19,31 @@ export default function MyOrders() {
     if (!localStorage.getItem('token')) return navigate('/login');
     api.get('/orders/my').then(({ data }) => setOrders(data));
   }, [navigate]);
+
+  // Функция для оставления отзыва
+  const handleReview = async (productId, sellerId) => {
+    const ratingStr = prompt('Оцените товар от 1 до 5:');
+    if (!ratingStr) return; // Если нажали "Отмена"
+
+    const rating = Number(ratingStr);
+    if (isNaN(rating) || rating < 1 || rating > 5) {
+      return alert('Оценка должна быть числом от 1 до 5');
+    }
+
+    const comment = prompt('Напишите комментарий (необязательно):');
+    
+    try {
+      await api.post('/reviews', {
+        product_id: productId,
+        target_user_id: sellerId,
+        rating: rating,
+        comment: comment || 'Без комментария'
+      });
+      alert('Спасибо! Ваш отзыв опубликован.');
+    } catch (e) {
+      alert(e.response?.data?.message || 'Ошибка при отправке отзыва');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -46,9 +70,21 @@ export default function MyOrders() {
                 </p>
                 <ul className="space-y-2 text-sm">
                   {order.items.map(item => (
-                    <li key={item.id} className="flex justify-between">
-                      <span>{item.product?.title} × {item.quantity}</span>
-                      <span>{(Number(item.price) * item.quantity).toLocaleString('ru-RU')} ₽</span>
+                    <li key={item.id} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                      <div className="flex-1">
+                        <span>{item.product?.title} × {item.quantity}</span>
+                        
+                        {/* Кнопка отзыва появляется только если заказ доставлен */}
+                        {order.status === 'delivered' && (
+                          <button 
+                            onClick={() => handleReview(item.product.id, item.seller_id)}
+                            className="ml-4 text-xs text-sky-600 hover:underline font-medium"
+                          >
+                            Оставить отзыв
+                          </button>
+                        )}
+                      </div>
+                      <span className="font-medium">{(Number(item.price) * item.quantity).toLocaleString('ru-RU')} ₽</span>
                     </li>
                   ))}
                 </ul>
