@@ -11,6 +11,60 @@ const STATUS_LABEL = {
   canceled: 'Отменён',
 };
 
+// Компонент таймлайна
+const OrderTimeline = ({ status }) => {
+  if (status === 'canceled') {
+    return (
+      <div className="my-4 p-3 bg-red-50 border border-red-100 rounded-md text-center text-red-600 text-sm font-medium">
+        Заказ отменён
+      </div>
+    );
+  }
+
+  const steps = [
+    { key: 'new', label: 'Новый' },
+    { key: 'paid', label: 'Оплачен' },
+    { key: 'shipped', label: 'В пути' },
+    { key: 'delivered', label: 'Доставлен' },
+  ];
+
+  const currentIndex = steps.findIndex(s => s.key === status);
+
+  return (
+    <div className="my-6 px-2">
+      <div className="flex items-center justify-between relative">
+        {/* Линия прогресса */}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-200 -z-10 rounded"></div>
+        <div 
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-sky-500 -z-10 rounded transition-all duration-500"
+          style={{ width: `${(Math.max(0, currentIndex) / (steps.length - 1)) * 100}%` }}
+        ></div>
+
+        {steps.map((step, index) => {
+          const isCompleted = index <= currentIndex;
+          const isCurrent = index === currentIndex;
+
+          return (
+            <div key={step.key} className="flex flex-col items-center bg-white px-2">
+              <div 
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
+                  ${isCompleted ? 'bg-sky-500 border-sky-500 text-white' : 'bg-white border-slate-300 text-slate-400'}
+                  ${isCurrent ? 'ring-4 ring-sky-100' : ''}
+                `}
+              >
+                {index + 1}
+              </div>
+              <span className={`text-xs mt-2 font-medium ${isCompleted ? 'text-slate-800' : 'text-slate-400'}`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function MyOrders() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -20,10 +74,9 @@ export default function MyOrders() {
     api.get('/orders/my').then(({ data }) => setOrders(data));
   }, [navigate]);
 
-  // Функция для оставления отзыва
   const handleReview = async (productId, sellerId) => {
     const ratingStr = prompt('Оцените товар от 1 до 5:');
-    if (!ratingStr) return; // Если нажали "Отмена"
+    if (!ratingStr) return;
 
     const rating = Number(ratingStr);
     if (isNaN(rating) || rating < 1 || rating > 5) {
@@ -56,41 +109,53 @@ export default function MyOrders() {
             Заказов пока нет. <Link to="/catalog" className="text-sky-600">Перейти в каталог</Link>
           </p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {orders.map(order => (
-              <div key={order.id} className="bg-white p-5 rounded-lg shadow-sm">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-semibold">Заказ №{order.id}</span>
-                  <span className="text-sm rounded-full bg-sky-100 text-sky-700 px-3 py-1">
+              <div key={order.id} className="bg-white p-6 rounded-lg shadow-sm border border-slate-100">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <span className="text-lg font-bold text-slate-900">Заказ №{order.id}</span>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {new Date(order.created_at).toLocaleString('ru-RU')} • {order.address}
+                    </p>
+                  </div>
+                  <span className={`text-sm font-medium px-3 py-1 rounded-full
+                    ${order.status === 'canceled' ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'}
+                  `}>
                     {STATUS_LABEL[order.status] || order.status}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mb-3">
-                  {new Date(order.created_at).toLocaleString('ru-RU')} • {order.address}
-                </p>
-                <ul className="space-y-2 text-sm">
-                  {order.items.map(item => (
-                    <li key={item.id} className="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
-                      <div className="flex-1">
-                        <span>{item.product?.title} × {item.quantity}</span>
-                        
-                        {/* Кнопка отзыва появляется только если заказ доставлен */}
-                        {order.status === 'delivered' && (
-                          <button 
-                            onClick={() => handleReview(item.product.id, item.seller_id)}
-                            className="ml-4 text-xs text-sky-600 hover:underline font-medium"
-                          >
-                            Оставить отзыв
-                          </button>
-                        )}
-                      </div>
-                      <span className="font-medium">{(Number(item.price) * item.quantity).toLocaleString('ru-RU')} ₽</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between font-bold">
+
+                {/* Таймлайн */}
+                <OrderTimeline status={order.status} />
+
+                {/* Состав заказа */}
+                <div className="border-t border-slate-100 pt-4">
+                  <ul className="space-y-3 text-sm">
+                    {order.items.map(item => (
+                      <li key={item.id} className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <span className="font-medium text-slate-800">{item.product?.title}</span> 
+                          <span className="text-slate-500 ml-2">× {item.quantity}</span>
+                          
+                          {order.status === 'delivered' && (
+                            <button 
+                              onClick={() => handleReview(item.product.id, item.seller_id)}
+                              className="ml-4 text-xs text-sky-600 hover:underline font-medium"
+                            >
+                              Оставить отзыв
+                            </button>
+                          )}
+                        </div>
+                        <span className="font-medium">{(Number(item.price) * item.quantity).toLocaleString('ru-RU')} ₽</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center font-bold text-lg">
                   <span>Итого</span>
-                  <span>{Number(order.total).toLocaleString('ru-RU')} ₽</span>
+                  <span className="text-sky-600">{Number(order.total).toLocaleString('ru-RU')} ₽</span>
                 </div>
               </div>
             ))}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Header from '../components/Header.jsx';
-import { getImageUrl } from '../utils/imageHelper.js'; 
+import { getImageUrl } from '../utils/imageHelper.js';
 
 export default function Product() {
   const { id } = useParams();
@@ -12,32 +12,37 @@ export default function Product() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // сам товар
+    // Загрузка данных товара
     api.get(`/products/${id}`).then(({ data }) => setProduct(data));
-    // отзывы на этот товар
+    // Загрузка отзывов на товар
     api.get(`/reviews/product/${id}`).then(({ data }) => setReviews(data)).catch(() => {});
   }, [id]);
 
   const addToCart = () => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existing = cart.find(i => i.product_id === product.id);
-    if (existing) existing.quantity += 1;
-    else cart.push({
-      product_id: product.id,
-      title: product.title,
-      price: Number(product.price),
-      image_url: product.image_url,
-      quantity: 1,
-    });
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      cart.push({
+        product_id: product.id,
+        title: product.title,
+        price: Number(product.price),
+        image_url: product.image_url,
+        quantity: 1,
+      });
+    }
     localStorage.setItem('cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cart-updated'));
     setMessage('Добавлено в корзину');
     setTimeout(() => setMessage(''), 2000);
   };
 
-  if (!product) return <div className="p-8 text-center text-slate-500">Загрузка…</div>;
+  if (!product) {
+    return <div className="p-8 text-center text-slate-500">Загрузка…</div>;
+  }
 
-  // Вычисляем средний рейтинг
+  // Вычисление среднего рейтинга
   const avgRating = reviews.length 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
     : 0;
@@ -49,7 +54,7 @@ export default function Product() {
         <Link to="/catalog" className="text-sm text-sky-600 hover:underline">← Назад в каталог</Link>
 
         <div className="mt-4 grid gap-8 md:grid-cols-2">
-          {/* Картинка товара */}
+          {/* Изображение товара */}
           <img 
             src={getImageUrl(product.image_url, 'https://placehold.co/600x400?text=Нет+фото')}
             alt={product.title} 
@@ -80,12 +85,16 @@ export default function Product() {
 
             <p className="mt-6 text-slate-700 whitespace-pre-wrap">{product.description}</p>
 
+            {/* Блок с информацией о продавце */}
             <div className="mt-6 rounded-lg bg-white p-4 shadow-sm border border-slate-100">
               <p className="text-xs text-slate-500 uppercase tracking-wide">Продавец</p>
-              <p className="font-medium mt-1">
+              <Link 
+                to={`/seller/${product.seller?.id}`} 
+                className="font-medium mt-1 text-sky-600 hover:underline block"
+              >
                 {product.seller?.last_name} {product.seller?.first_name}
                 {product.seller?.city && ` • ${product.seller.city}`}
-              </p>
+              </Link>
             </div>
 
             <button 
@@ -104,7 +113,7 @@ export default function Product() {
         <div className="mt-12 bg-white p-6 rounded-lg shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold mb-6">Отзывы покупателей</h2>
           {reviews.length === 0 ? (
-            <p className="text-slate-500">Пока нет отзывов. Купите товар и оставьте первый отзыв!</p>
+            <p className="text-slate-500">Пока нет отзывов. Купите товар и оставьте первый отзыв.</p>
           ) : (
             <div className="space-y-4">
               {reviews.map(r => (

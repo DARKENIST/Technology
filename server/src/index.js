@@ -20,6 +20,8 @@ import deviceRoutes from './routes/devices.js';
 import uploadRoutes from './routes/upload.js';
 import favoriteRoutes from './routes/favorites.js';
 import reviewRoutes from './routes/reviews.js';
+import userRoutes from './routes/users.js';
+
 
 dotenv.config();
 
@@ -55,6 +57,7 @@ app.use('/api/devices', deviceRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 5000;
 

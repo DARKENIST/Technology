@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Header from '../components/Header.jsx';
 import { getImageUrl } from '../utils/imageHelper.js';
@@ -21,12 +21,14 @@ export default function SellerPanel() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  // Функция загрузки данных с сервера
   const load = () => {
     api.get('/seller/products').then(({ data }) => setProducts(data));
     api.get('/seller/orders').then(({ data }) => setOrders(data));
     api.get('/seller/stats').then(({ data }) => setStats(data));
   };
 
+  // Проверка прав доступа и первичная загрузка данных
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (!user || !['seller','admin'].includes(user.role)) return navigate('/login');
@@ -36,6 +38,7 @@ export default function SellerPanel() {
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Обработка загрузки файла изображения
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -56,6 +59,7 @@ export default function SellerPanel() {
     }
   };
 
+  // Отправка формы добавления или редактирования товара
   const submit = async e => {
     e.preventDefault();
     setError('');
@@ -77,6 +81,7 @@ export default function SellerPanel() {
     }
   };
 
+  // Подготовка формы к редактированию товара
   const startEdit = p => {
     setEditing(p.id);
     setForm({
@@ -88,6 +93,7 @@ export default function SellerPanel() {
     setTab('add');
   };
 
+  // Удаление товара
   const remove = async id => {
     if (!confirm('Удалить товар?')) return;
     await api.delete(`/products/${id}`);
@@ -100,6 +106,7 @@ export default function SellerPanel() {
       <div className="max-w-5xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold mb-6">Панель продавца</h1>
 
+        {/* Блок статистики */}
         <div className="grid gap-4 md:grid-cols-3 mb-8">
           <div className="bg-white p-5 rounded-lg shadow-sm">
             <p className="text-sm text-slate-500">Товаров</p>
@@ -117,6 +124,7 @@ export default function SellerPanel() {
           </div>
         </div>
 
+        {/* Навигация по вкладкам */}
         <div className="flex gap-2 border-b border-slate-200 mb-6">
           <button onClick={() => setTab('products')}
             className={`px-4 py-2 text-sm ${tab === 'products' ? 'border-b-2 border-sky-500 text-sky-600' : 'text-slate-600'}`}>
@@ -132,6 +140,7 @@ export default function SellerPanel() {
           </button>
         </div>
 
+        {/* Вкладка: Список товаров */}
         {tab === 'products' && (
           <div className="space-y-3">
             {products.length === 0 ? (
@@ -155,6 +164,7 @@ export default function SellerPanel() {
           </div>
         )}
 
+        {/* Вкладка: Заказы */}
         {tab === 'orders' && (
           <div className="space-y-4">
             {orders.length === 0 ? (
@@ -179,9 +189,9 @@ export default function SellerPanel() {
           </div>
         )}
 
+        {/* Вкладка: Форма добавления/редактирования */}
         {tab === 'add' && (
           <form onSubmit={submit} className="bg-white p-6 rounded-lg shadow-sm grid gap-4 md:grid-cols-2">
-            {/* ВОЗВРАЩАЕМ ВСЕ ПОЛЯ ФОРМЫ */}
             <input name="title" value={form.title} onChange={handleChange} required
               placeholder="Название" className="md:col-span-2 rounded-md border border-slate-300 px-4 py-2" />
             
@@ -202,7 +212,7 @@ export default function SellerPanel() {
               <option value="used">Б/у</option>
             </select>
             
-            {/* Блок загрузки картинки */}
+            {/* Блок загрузки изображения */}
             <div className="md:col-span-2 flex items-center gap-4 p-4 border border-slate-200 rounded-md bg-slate-50">
               {form.image_url ? (
                 <img src={getImageUrl(form.image_url)} alt="Обложка" className="w-20 h-20 object-cover rounded-md border" />
@@ -228,6 +238,8 @@ export default function SellerPanel() {
               className="md:col-span-2 rounded-md bg-sky-500 py-3 text-white font-medium hover:bg-sky-600">
               {editing ? 'Сохранить изменения' : 'Добавить товар'}
             </button>
+            
+            {/* Кнопка отмены редактирования */}
             {editing && (
               <button type="button"
                 onClick={() => { setEditing(null); setForm({

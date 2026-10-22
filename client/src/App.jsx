@@ -16,6 +16,8 @@ import MasterPanel from './pages/MasterPanel.jsx';
 import SellerPanel from './pages/SellerPanel.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
 import Favorites from './pages/Favorites.jsx'; 
+import SellerProfile from './pages/SellerProfile.jsx';
+
 
 export default function App() {
   return (
@@ -34,6 +36,7 @@ export default function App() {
       <Route path="/seller" element={<SellerPanel />} />
       <Route path="/admin" element={<AdminPanel />} />
       <Route path="/favorites" element={<Favorites />} /> {/* Маршрут для избранного */}
+      <Route path="/seller/:id" element={<SellerProfile />} />
     </Routes>
   );
 }
