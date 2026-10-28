@@ -11,7 +11,7 @@ const STATUS_LABEL = {
   canceled: 'Отменён',
 };
 
-// Компонент таймлайна
+// Компонент визуализации статуса заказа
 const OrderTimeline = ({ status }) => {
   if (status === 'canceled') {
     return (
@@ -33,8 +33,9 @@ const OrderTimeline = ({ status }) => {
   return (
     <div className="my-6 px-2">
       <div className="flex items-center justify-between relative">
-        {/* Линия прогресса */}
+        {/* Фоновая линия */}
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-200 -z-10 rounded"></div>
+        {/* Линия прогресса */}
         <div 
           className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-sky-500 -z-10 rounded transition-all duration-500"
           style={{ width: `${(Math.max(0, currentIndex) / (steps.length - 1)) * 100}%` }}
@@ -74,6 +75,19 @@ export default function MyOrders() {
     api.get('/orders/my').then(({ data }) => setOrders(data));
   }, [navigate]);
 
+  // Функция для перехода к оплате
+  const handlePay = async (orderId) => {
+    try {
+      // Запрос к бэкенду для создания платежа
+      const { data } = await api.post(`/payments/create/${orderId}`);
+      // Перенаправление на страницу оплаты платежной системы
+      window.location.href = data.confirmation_url;
+    } catch (e) {
+      alert('Ошибка при создании платежа. Попробуйте позже.');
+    }
+  };
+
+  // Функция для оставления отзыва
   const handleReview = async (productId, sellerId) => {
     const ratingStr = prompt('Оцените товар от 1 до 5:');
     if (!ratingStr) return;
@@ -126,7 +140,7 @@ export default function MyOrders() {
                   </span>
                 </div>
 
-                {/* Таймлайн */}
+                {/* Таймлайн заказа */}
                 <OrderTimeline status={order.status} />
 
                 {/* Состав заказа */}
@@ -138,6 +152,7 @@ export default function MyOrders() {
                           <span className="font-medium text-slate-800">{item.product?.title}</span> 
                           <span className="text-slate-500 ml-2">× {item.quantity}</span>
                           
+                          {/* Кнопка отзыва доступна только после доставки */}
                           {order.status === 'delivered' && (
                             <button 
                               onClick={() => handleReview(item.product.id, item.seller_id)}
@@ -153,9 +168,20 @@ export default function MyOrders() {
                   </ul>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center font-bold text-lg">
-                  <span>Итого</span>
-                  <span className="text-sky-600">{Number(order.total).toLocaleString('ru-RU')} ₽</span>
+                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                  <div className="text-lg font-bold">
+                    Итого: <span className="text-sky-600">{Number(order.total).toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  
+                  {/* Кнопка оплаты для новых заказов */}
+                  {order.status === 'new' && (
+                    <button 
+                      onClick={() => handlePay(order.id)}
+                      className="rounded-md bg-green-500 px-6 py-2 text-white font-medium hover:bg-green-600 transition shadow-sm"
+                    >
+                      Оплатить заказ
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
