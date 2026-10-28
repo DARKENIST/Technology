@@ -1,50 +1,39 @@
 import { Router } from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = Router();
 
-// Проверяем, существует ли папка uploads, если нет - создаем
-const dir = './uploads';
-if (!fs.existsSync(dir)) {
-  fs.mkdirSync(dir);
-}
+// Настройка подключения к Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// Настраиваем хранилище
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, dir); // Сохраняем в папку uploads
+// Настройка хранилища Multer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'tehnolodgy', // Папка в Cloudinary
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
   },
-  filename: (req, file, cb) => {
-    // Делаем уникальное имя: текущее время + оригинальное расширение (например, 171628394.jpg)
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
 });
 
-// Фильтр по типу файла (только картинки)
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Разрешены только изображения!'), false);
-  }
-};
+const upload = multer({ storage });
 
-const upload = multer({ 
-  storage, 
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // Лимит 5 МБ
-});
-
-// Маршрут загрузки одного файла (поле называется 'image')
+// Маршрут загрузки одного файла
 router.post('/', upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'Файл не загружен' });
   }
   
-  // Возвращаем путь к файлу, чтобы сохранить его в БД
-  res.json({ url: `/uploads/${req.file.filename}` });
+  // Cloudinary возвращает полный путь (URL) к файлу в req.file.path
+  res.json({ url: req.file.path });
 });
 
 export default router;
