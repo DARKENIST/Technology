@@ -26,7 +26,9 @@ import userRoutes from './routes/users.js';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://technology-client-40ch.onrender.com']
+}));
 app.use(express.json());
 
 // Настройка статического маршрута для файлов изображений
