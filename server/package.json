@@ -16,7 +16,8 @@
     "multer": "^2.4.0",
     "pg": "^8.23.1",
     "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.8"
+    "sequelize": "^6.37.8",
+    "yookassa-api-sdk": "^0.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
