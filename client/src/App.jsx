@@ -17,6 +17,8 @@ import SellerPanel from './pages/SellerPanel.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
 import Favorites from './pages/Favorites.jsx'; 
 import SellerProfile from './pages/SellerProfile.jsx';
+import Payment from './pages/Payment.jsx';
+
 
 
 export default function App() {
@@ -37,6 +39,7 @@ export default function App() {
       <Route path="/admin" element={<AdminPanel />} />
       <Route path="/favorites" element={<Favorites />} /> {/* Маршрут для избранного */}
       <Route path="/seller/:id" element={<SellerProfile />} />
+      <Route path="/payment/:id" element={<Payment />} />
     </Routes>
   );
 }
