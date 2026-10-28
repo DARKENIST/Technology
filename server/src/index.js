@@ -21,6 +21,7 @@ import uploadRoutes from './routes/upload.js';
 import favoriteRoutes from './routes/favorites.js';
 import reviewRoutes from './routes/reviews.js';
 import userRoutes from './routes/users.js';
+import paymentRoutes from './routes/payments.js';
 
 
 dotenv.config();
@@ -60,6 +61,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/payments', paymentRoutes);
 
 const PORT = process.env.PORT || 5000;
 

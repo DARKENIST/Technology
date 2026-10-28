@@ -175,13 +175,13 @@ export default function MyOrders() {
                   
                   {/* Кнопка оплаты для новых заказов */}
                   {order.status === 'new' && (
-                    <button 
-                      onClick={() => handlePay(order.id)}
-                      className="rounded-md bg-green-500 px-6 py-2 text-white font-medium hover:bg-green-600 transition shadow-sm"
-                    >
-                      Оплатить заказ
-                    </button>
-                  )}
+  <Link 
+    to={`/payment/${order.id}`}
+    className="rounded-md bg-green-500 px-6 py-2 text-white font-medium hover:bg-green-600 transition shadow-sm inline-block text-center"
+  >
+    Перейти к оплате
+  </Link>
+)}
                 </div>
               </div>
             ))}

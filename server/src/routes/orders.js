@@ -126,5 +126,31 @@ router.put('/:id/status', requireRole('seller', 'admin'), async (req, res) => {
     res.status(500).json({ message: 'Ошибка', error: e.message });
   }
 });
+// Маршрут для имитации успешной оплаты
+router.put('/:id/pay', auth, async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Заказ не найден' });
+    }
+    
+    // Проверяем, что заказ принадлежит текущему пользователю
+    if (order.buyer_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Нет прав на оплату этого заказа' });
+    }
+
+    // Меняем статус на "Оплачен" и указываем способ оплаты
+    order.status = 'paid';
+    order.payment_method = 'card';
+    order.updated_at = new Date();
+    await order.save();
+
+    res.json({ message: 'Оплата прошла успешно', order });
+  } catch (e) {
+    console.error('Ошибка при имитации оплаты:', e);
+    res.status(500).json({ message: 'Ошибка сервера', error: e.message });
+  }
+});
 
 export default router;
