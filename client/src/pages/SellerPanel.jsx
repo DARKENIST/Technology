@@ -3,10 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Header from '../components/Header.jsx';
 import { getImageUrl } from '../utils/imageHelper.js';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function SellerPanel() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ products: 0, sold: 0, revenue: 0 });
+  const [stats, setStats] = useState({ products: 0, sold: 0, revenue: 0, salesChart: [] });
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -21,14 +22,12 @@ export default function SellerPanel() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  // Функция загрузки данных с сервера
   const load = () => {
     api.get('/seller/products').then(({ data }) => setProducts(data));
     api.get('/seller/orders').then(({ data }) => setOrders(data));
     api.get('/seller/stats').then(({ data }) => setStats(data));
   };
 
-  // Проверка прав доступа и первичная загрузка данных
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (!user || !['seller','admin'].includes(user.role)) return navigate('/login');
@@ -38,7 +37,6 @@ export default function SellerPanel() {
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  // Обработка загрузки файла изображения
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -59,7 +57,6 @@ export default function SellerPanel() {
     }
   };
 
-  // Отправка формы добавления или редактирования товара
   const submit = async e => {
     e.preventDefault();
     setError('');
@@ -81,7 +78,6 @@ export default function SellerPanel() {
     }
   };
 
-  // Подготовка формы к редактированию товара
   const startEdit = p => {
     setEditing(p.id);
     setForm({
@@ -93,12 +89,18 @@ export default function SellerPanel() {
     setTab('add');
   };
 
-  // Удаление товара
   const remove = async id => {
     if (!confirm('Удалить товар?')) return;
     await api.delete(`/products/${id}`);
     load();
   };
+
+  // Форматирование данных для графика
+  const chartData = (stats.salesChart || []).map(item => ({
+    ...item,
+    date: new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }),
+    total: Number(item.total)
+  }));
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -117,10 +119,35 @@ export default function SellerPanel() {
             <p className="text-2xl font-bold">{stats.sold}</p>
           </div>
           <div className="bg-white p-5 rounded-lg shadow-sm">
-            <p className="text-sm text-slate-500">Выручка</p>
+            <p className="text-sm text-slate-500">Общая выручка</p>
             <p className="text-2xl font-bold text-sky-600">
               {stats.revenue.toLocaleString('ru-RU')} ₽
             </p>
+          </div>
+        </div>
+
+        {/* Блок графика продаж */}
+        <div className="bg-white p-5 rounded-lg shadow-sm mb-8">
+          <h3 className="text-lg font-semibold mb-4">Динамика продаж за последние дни</h3>
+          <div className="h-64 w-full">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${value} ₽`} />
+                  <Tooltip 
+                    formatter={(value) => [`${value.toLocaleString('ru-RU')} ₽`, 'Выручка']}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Line type="monotone" dataKey="total" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4, fill: '#0ea5e9' }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-500">
+                Нет данных о продажах для отображения графика.
+              </div>
+            )}
           </div>
         </div>
 
@@ -212,7 +239,6 @@ export default function SellerPanel() {
               <option value="used">Б/у</option>
             </select>
             
-            {/* Блок загрузки изображения */}
             <div className="md:col-span-2 flex items-center gap-4 p-4 border border-slate-200 rounded-md bg-slate-50">
               {form.image_url ? (
                 <img src={getImageUrl(form.image_url)} alt="Обложка" className="w-20 h-20 object-cover rounded-md border" />
@@ -239,7 +265,6 @@ export default function SellerPanel() {
               {editing ? 'Сохранить изменения' : 'Добавить товар'}
             </button>
             
-            {/* Кнопка отмены редактирования */}
             {editing && (
               <button type="button"
                 onClick={() => { setEditing(null); setForm({

@@ -2,13 +2,13 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { User, Product, RepairRequest, Order, OrderItem, Category, Device, Review } from '../models/index.js';
 import { auth, requireRole } from '../middleware/auth.js';
+import { sequelize } from '../db.js'; // <--- Необходимая строка для подключения к БД
 
 const router = Router();
-
 router.use(auth, requireRole('admin'));
 
-// ================== СТАТИСТИКА ==================
 
+// ================== СТАТИСТИКА ==================
 router.get('/stats', async (req, res) => {
   try {
     const [
@@ -25,14 +25,34 @@ router.get('/stats', async (req, res) => {
       OrderItem.sum('price'),
     ]);
 
+    // Прямой SQL-запрос для графика 
+    const revenueChartRaw = await sequelize.query(`
+      SELECT 
+        TO_CHAR(created_at, 'YYYY-MM-DD') as date, 
+        SUM(total) as total
+      FROM orders
+      GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+      ORDER BY date ASC
+      LIMIT 7
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    const rolesChart = [
+      { name: 'Покупатели', value: buyersCount },
+      { name: 'Продавцы', value: sellersCount },
+      { name: 'Мастера', value: mastersCount },
+    ];
+
     res.json({
       users:    { total: usersCount, buyers: buyersCount, sellers: sellersCount, masters: mastersCount },
       products: productsCount,
       repairs:  repairsCount,
       orders:   ordersCount,
       revenue:  Number(revenue || 0),
+      revenueChart: revenueChartRaw,
+      rolesChart
     });
   } catch (e) {
+    console.error('Ошибка в admin/stats:', e);
     res.status(500).json({ message: 'Ошибка статистики', error: e.message });
   }
 });

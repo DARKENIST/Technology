@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Product, Order, OrderItem, User } from '../models/index.js';
 import { auth, requireRole } from '../middleware/auth.js';
+import { sequelize } from '../db.js'; 
 
 const router = Router();
 
@@ -26,7 +27,6 @@ router.get('/orders', async (req, res) => {
     ],
   });
 
-  // Группируем по заказу
   const grouped = {};
   items.forEach(item => {
     const id = item.order.id;
@@ -37,17 +37,40 @@ router.get('/orders', async (req, res) => {
   res.json(Object.values(grouped));
 });
 
-// Статистика
+// статистика с графиком продаж
 router.get('/stats', async (req, res) => {
-  const productsCount = await Product.count({ where: { seller_id: req.user.id } });
-  const itemsSold = await OrderItem.sum('quantity', { where: { seller_id: req.user.id } });
-  const revenue = await OrderItem.sum('price',  { where: { seller_id: req.user.id } });
+  try {
+    const productsCount = await Product.count({ where: { seller_id: req.user.id } });
+    const itemsSold = await OrderItem.sum('quantity', { where: { seller_id: req.user.id } });
+    const revenue = await OrderItem.sum('price',  { where: { seller_id: req.user.id } });
 
-  res.json({
-    products: productsCount,
-    sold: itemsSold || 0,
-    revenue: Number(revenue || 0),
-  });
+    // Прямой SQL-запрос для получения выручки конкретного продавца по дням
+    const salesChartRaw = await sequelize.query(`
+      SELECT 
+        TO_CHAR(o.created_at, 'YYYY-MM-DD') as date, 
+        SUM(oi.price * oi.quantity) as total
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE oi.seller_id = :sellerId 
+        AND o.status IN ('paid', 'shipped', 'delivered')
+      GROUP BY TO_CHAR(o.created_at, 'YYYY-MM-DD')
+      ORDER BY date ASC
+      LIMIT 7
+    `, { 
+      replacements: { sellerId: req.user.id },
+      type: sequelize.QueryTypes.SELECT 
+    });
+
+    res.json({
+      products: productsCount,
+      sold: itemsSold || 0,
+      revenue: Number(revenue || 0),
+      salesChart: salesChartRaw
+    });
+  } catch (e) {
+    console.error('Ошибка в seller/stats:', e);
+    res.status(500).json({ message: 'Ошибка получения статистики', error: e.message });
+  }
 });
 
 export default router;
